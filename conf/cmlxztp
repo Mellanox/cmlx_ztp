@@ -1,0 +1,9 @@
+/var/log/cmlxztp.log {
+    compress
+    rotate 15
+    daily
+    dateext
+    missingok
+    copytruncate
+    notifempty
+}

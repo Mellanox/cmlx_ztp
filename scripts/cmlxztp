@@ -1,0 +1,102 @@
+#!/bin/bash
+
+PYTHON_CMD="python -m cmlxztp.core.main_app"
+
+NAME=cmlxztp
+PIDFILE=/var/run/$NAME.pid
+LOG_FILE=/var/log/${NAME}_console.log
+
+readonly RUNNING="RUNNING"
+readonly DEAD="DEAD"
+readonly STOPPED="STOPPED"
+#daemon_status=""
+
+function check_status()
+{
+    res=${RUNNING}
+    if [ -f $PIDFILE ]; then
+        PID=`cat $PIDFILE`
+        if [ -z "`ps axf | grep ${PID} | grep ${NAME}`" ]; then
+            res=${DEAD}
+        fi
+    else
+        res=${STOPPED}
+    fi
+    echo ${res}
+}
+
+function _start_proc()
+{
+    PID=`${PYTHON_CMD} >> ${LOG_FILE} 2>&1 & echo $!`
+    if [ -z $PID ]; then
+        printf "%s\n" "Fail"
+    else
+        echo $PID > $PIDFILE
+        printf "%s\n" "Ok"
+        echo "see log file ${LOG_FILE} for more details.."
+    fi
+}
+
+function cmlxztp_start()
+{
+    printf "%-50s" "Starting $NAME..."
+    res=$(check_status)
+    if [ ${res} == ${RUNNING} ]; then
+        echo "Already Running..."
+    else
+        _start_proc
+    fi
+}
+
+function cmlxztp_stop()
+{
+    printf "%-50s" "Stopping $NAME"
+    res=$(check_status)
+    if [ ${res} == ${RUNNING} ]; then
+        PID=`cat $PIDFILE`
+        kill -TERM $PID
+        printf "%s\n" "Ok"
+        rm -f $PIDFILE
+    elif [ ${res} == ${DEAD} ]; then
+        printf "%s\n" "Process dead but pidfile exists"
+        rm -f $PIDFILE
+    else
+        printf "%s\n" "Service not running"
+    fi
+}
+
+function cmlxztp_status()
+{
+    printf "%-50s" "Checking $NAME..."
+    res=$(check_status)
+    if [ ${res} == ${RUNNING} ]; then
+        echo "Running"
+    elif [ ${res} == ${DEAD} ]; then
+        printf "%s\n" "Process dead but pidfile exists"
+    else
+        printf "%s\n" "Service not running"
+    fi
+}
+
+case "$1" in
+start)
+    cmlxztp_start
+    ;;
+status)
+    cmlxztp_status
+    ;;
+stop)
+    cmlxztp_stop
+    ;;
+
+restart)
+    cmlxztp_stop
+    cmlxztp_start
+    ;;
+version)
+    ${DAEMIN_CMD} --version
+    ;;
+*)
+    echo "Usage: $0 {status|start|stop|restart|version}"
+    exit 1
+esac

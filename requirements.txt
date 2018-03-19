@@ -1,0 +1,4 @@
+paramiko
+cryptography
+setuptools
+netaddr
